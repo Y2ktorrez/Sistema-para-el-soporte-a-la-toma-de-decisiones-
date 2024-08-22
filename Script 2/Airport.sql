@@ -1,4 +1,4 @@
-
+use master;
 /********************** Andres Torrez Vaca ****************************/
 /********************** 220153914 ****************************/
 
@@ -211,7 +211,7 @@ end
 
 go
 
-if object_id('PiecesOIfLuggage', 'U') is null
+if object_id('PiecesOfLuggage', 'U') is null
 begin
 	create table PiecesOfLuggage(
 	id int identity(1,1) primary key,
