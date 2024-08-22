@@ -1,4 +1,5 @@
 use master;
+
 /********************** Andres Torrez Vaca ****************************/
 /********************** 220153914 ****************************/
 
@@ -224,4 +225,132 @@ end
 
 go
 
-select * from airport;
+---------------------------------------------------------------------------------
+insert into Country (name) values 
+('USA'), 
+('Germany'), 
+('Brazil'), 
+('Japan'), 
+('Australia'), 
+('Canada');
+
+insert into Customer (dateOfBirth, name) values 
+('1985-02-15', 'John Doe'),
+('1990-06-10', 'Jane Smith'),
+('1978-12-25', 'Carlos Silva'),
+('1983-03-05', 'Maria Gomez'),
+('1992-11-20', 'Yuki Yamamoto'),
+('1988-09-30', 'Anna Müller');
+
+insert into Passport (dateOfBirth, validDate, customerId, contryId) values 
+('1985-02-15', '2030-02-14', 1, 1),
+('1990-06-10', '2031-06-09', 2, 2),
+('1978-12-25', '2029-12-24', 3, 3),
+('1983-03-05', '2028-03-04', 4, 4),
+('1992-11-20', '2032-11-19', 5, 5),
+('1988-09-30', '2031-09-29', 6, 6);
+
+insert into City (countryId, name) values 
+(1, 'New York'),
+(2, 'Berlin'),
+(3, 'Rio de Janeiro'),
+(4, 'Tokyo'),
+(5, 'Sydney'),
+(6, 'Toronto');
+
+insert into Airport (name, cityId) values 
+('JFK International', 1),
+('Berlin Brandenburg', 2),
+('Galeão International', 3),
+('Narita International', 4),
+('Sydney Kingsford Smith', 5),
+('Toronto Pearson', 6);
+
+insert into PlaneModel (description, graphic) values 
+('Boeing 737', 'B737'),
+('Airbus A320', 'A320'),
+('Embraer E190', 'E190'),
+('Boeing 777', 'B777'),
+('Airbus A380', 'A380'),
+('Boeing 787', 'B787');
+
+insert into FrequentFlyerCard (miles, mealCode, customerId) values 
+(15000, 1, 1),
+(25000, 2, 2),
+(18000, 3, 3),
+(22000, 1, 4),
+(30000, 2, 5),
+(27000, 3, 6);
+
+insert into Airplane (beginofOperation, status, planeModelId) values 
+('2010-01-01', 'Active', 1),
+('2015-06-15', 'Active', 2),
+('2012-03-30', 'Active', 3),
+('2008-11-10', 'Active', 4),
+('2017-09-25', 'Active', 5),
+('2019-07-20', 'Active', 6);
+
+insert into FlightNumber (departureTime, description, type, airline, airportStart, airportGoal) values 
+('08:00:00', 'NY to Berlin', 1, 'Delta', 1, 2),
+('10:00:00', 'Berlin to Tokyo', 1, 'Lufthansa', 2, 4),
+('14:00:00', 'Rio to Sydney', 1, 'LATAM', 3, 5),
+('16:00:00', 'Tokyo to Toronto', 1, 'ANA', 4, 6),
+('09:00:00', 'Sydney to New York', 1, 'Qantas', 5, 1),
+('13:00:00', 'Toronto to Rio', 1, 'Air Canada', 6, 3);
+
+insert into Ticket (number, customerId) values 
+(101, 1),
+(102, 2),
+(103, 3),
+(104, 4),
+(105, 5),
+(106, 6);
+
+insert into Flight (boardingTime, flightDate, gate, checkInCounter, flightNumberid) values 
+('07:30:00', '2024-09-01', 5, 1, 1),
+('09:30:00', '2024-09-02', 3, 0, 2),
+('13:30:00', '2024-09-03', 2, 1, 3),
+('15:30:00', '2024-09-04', 4, 0, 4),
+('08:30:00', '2024-09-05', 1, 1, 5),
+('12:30:00', '2024-09-06', 6, 0, 6);
+
+insert into Seat (size, number, location, planeModelId) values 
+(30, 1, 'Front', 1),
+(30, 2, 'Middle', 2),
+(30, 3, 'Back', 3),
+(30, 4, 'Front', 4),
+(30, 5, 'Middle', 5),
+(30, 6, 'Back', 6);
+
+insert into AvailableSeat (flightId, seatId) values 
+(1, 1),
+(2, 2),
+(3, 3),
+(4, 4),
+(5, 5),
+(6, 6);
+
+insert into Coupon (dateOfRedemption, class, standby, mealCode, ticketingCode, flightId) values 
+('2024-09-01', 'Economy', 'No', 1, 1, 1),
+('2024-09-02', 'Business', 'No', 2, 2, 2),
+('2024-09-03', 'First', 'Yes', 3, 3, 3),
+('2024-09-04', 'Economy', 'Yes', 1, 4, 4),
+('2024-09-05', 'Business', 'No', 2, 5, 5),
+('2024-09-06', 'First', 'Yes', 3, 6, 6);
+
+insert into AvailableSeatCoupon (couponId, availableSeatId) values 
+(1, 1),
+(2, 2),
+(3, 3),
+(4, 4),
+(5, 5),
+(6, 6);
+
+insert into PiecesOfLuggage (number, weight, couponId) values 
+(2, 20, 1),
+(1, 25, 2),
+(3, 30, 3),
+(2, 18, 4),
+(1, 23, 5),
+(2, 22, 6);
+
