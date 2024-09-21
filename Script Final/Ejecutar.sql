@@ -21,45 +21,36 @@ EXEC InsertFlightNumbers @NumberOfRows = 1500;
 --Insert date Seat
 EXEC InsertSeats @NumberOfRows = 200;
 
+--Insert date Airline
+EXEC InsertAirline;
+
 --Insert date Flight
 EXEC InsertFlights @NumberOfRows = 1500;
-
---Insert date FlightScales
-EXEC InsertFlightScales;
-
---Insert date InsertScales
-EXEC InsertScales @NumberOfRows = 800;
 
 --Insert date Available_Seat
 EXEC InsertAvailable_Seat @NumberOfRows = 100;
 
---Insert date Airline
-EXEC InsertAirline;
-
 --Insert date Passenger_Type
 EXEC InsertPassenger_Type;
 
---Insert date Type_Assigment
-EXEC InsertTypeAssignments @NumberOfRows = 100;
-
---Insert date Person_Type
-EXEC InsertPerson_Type;
-
---Insert date Passenger
+--Insert date Person
 EXEC LoadPersonDataFrom ;--@FilePath = 'C:\Users\usuario\Desktop\uagrm\2-2024\soport\Script\person.csv'--cambiar la ruta del archivo
 EXEC InsertDataFromTempToPerson;
-select * from Person
+
 --Insert date Passenger
-EXEC InsertPassengers @NumberOfRows = 200;
+EXEC InsertPassengers @NumberOfRows = 800;
+
+--Insert date Customer
+EXEC InsertCustomer @NumberOfRows = 400;
 
 --Insert date Crew_Member
-EXEC InsertCrewMembers @NumberOfRows = 30;
+EXEC InsertCrewMembers @NumberOfRows = 50;
 
 --Insert date Crew_Rol
 EXEC InsertCrew_Rol;
 
 --Insert date Crew_Assigment
-EXEC InsertCrewAssignments @NumberOfRows = 20;
+EXEC InsertCrewAssignments @NumberOfRows = 50;
 
 --Insert date Frequent_Flyer_Card
 EXEC InsertFrequentFlyerCards @NumberOfRows = 200;
@@ -68,13 +59,13 @@ EXEC InsertFrequentFlyerCards @NumberOfRows = 200;
 EXEC InsertFlightCancellations @NumberOfRows = 50;
 
 --Insert date Flight_Reprograming
-EXEC InsertFlightReprogramings @NumberOfRows = 50;
+EXEC InsertFlightReprogramings @NumberOfRows = 40;
 
 --Insert date Payment_Type
 EXEC InsertPayment_Type;
 
 --Insert date Payment
-EXEC InsertPayments @NumberOfRows = 100;
+EXEC InsertPayments @NumberOfRows = 300;
 
 --Insert date Document_Type
 EXEC InsertDocument_Type;
@@ -89,25 +80,28 @@ EXEC InsertCategory;
 EXEC InsertTickets @NumberOfRows = 500;
 
 --Insert date Reserve
-EXEC InsertReserves @NumberOfRows = 100;
+EXEC InsertReserves @NumberOfRows = 500;
+
+--Insert date Confirmation
+EXEC InsertConfirmation @NumberOfRows = 450;
 
 --Insert date Cancellation
-EXEC InsertCancellations @NumberOfRows = 30;
+EXEC InsertCancellations @NumberOfRows = 50;
 
 --Insert date Coupon
-EXEC InsertCoupons @NumberOfRows = 500;
+EXEC InsertCoupons @NumberOfRows = 800;
 
 --Insert date Boarding_Pass
-EXEC InsertBoardingPasses @NumberOfRows = 450;
+EXEC InsertBoardingPasses @NumberOfRows = 750;
 
 --Insert date Pieces_of_Luggage
-EXEC InsertPiecesOfLuggage @NumberOfRows = 450;
+EXEC InsertPiecesOfLuggage @NumberOfRows = 750;
 
 --Insert date Baggage_Check_In
-EXEC InsertPiecesOfLuggage @NumberOfRows = 450;
+EXEC InsertPiecesOfLuggage @NumberOfRows = 750;
 
---Insert date Available_Seat_Coupon
-EXEC InsertAvailableSeatCoupons @NumberOfRows = 350;
+--Insert date Check_In
+EXEC InsertCheck_In @NumberOfRows = 750;
 
 
 

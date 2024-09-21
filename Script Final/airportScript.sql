@@ -82,14 +82,13 @@ begin
         Type bit not null,
         Airport_Start int not null,
         Airport_Goal int not null,
-		Plane_id int not null,
         foreign key (Airport_Start) references Airport(id) ON DELETE NO ACTION,
         foreign key (Airport_Goal) references Airport(id) ON DELETE NO ACTION,
-		foreign key (Plane_id) references Plane_Model(id) ON DELETE NO ACTION,
         CONSTRAINT Check_Airport check (Airport_Start <> Airport_Goal)
     );
 end
 go
+
 
 ---------------------------------------------------------------------
 
@@ -102,64 +101,6 @@ begin
         Location varchar(30) check (Location IN ('Window','Aisle','Middle','Left','Right')),
         Plane_Model_ID int not null,
         foreign key (Plane_Model_ID) references Plane_Model(ID) ON DELETE NO ACTION
-    );
-end
-go
-
----------------------------------------------------------------------
-
-if object_id('Flight', 'U') is null
-begin
-    create table Flight(
-        ID int identity(1,1) primary key,
-        Boarding_Time time not null,
-        Flight_Date date not null check (Flight_Date >= CONVERT(DATE, GETDATE())),
-        Gate tinyint not null check (Gate BETWEEN 1 AND 255),
-        Check_In_Counter bit not null,
-        Flight_Number_id int not null,
-        foreign key (Flight_Number_ID) references Flight_Number(ID) ON DELETE NO ACTION
-    );
-end
-go
-
----------------------------------------------------------------------
-
-if object_id('Flight_Scale', 'U') is null
-begin
-    create table Flight_Scale(
-        ID int identity(1,1) primary key,
-        Scale_Type varchar(30) check (Scale_Type IN('Technical scale','Regular scale','Connected flight')),
-		Scale_Time time not null,
-    );
-end
-go
-
----------------------------------------------------------------------
-
-if object_id('Scale', 'U') is null
-begin
-    create table Scale(
-        ID int identity(1,1) primary key,
-        Date date not null,
-		Time time not null,
-		Flight_ID int not null,
-		Airport_ID int not null,
-		foreign key (Flight_ID) references Flight(ID) ON DELETE NO ACTION,
-		foreign key (Airport_ID) references Airport(ID) ON DELETE NO ACTION,
-    );
-end
-go
-
----------------------------------------------------------------------
-
-if object_id('Available_Seat', 'U') is null
-begin
-    create table Available_Seat(
-        ID int identity(1,1) primary key,
-        Flight_ID int not null,
-        Seat_ID int not null,
-        foreign key (Flight_ID) references Flight(ID) ON DELETE NO ACTION,
-        foreign key (Seat_ID) references Seat(ID) ON DELETE NO ACTION
     );
 end
 go
@@ -179,35 +120,47 @@ go
 
 ---------------------------------------------------------------------
 
-if object_id('Passenger_Type', 'U') is null
+if object_id('Flight', 'U') is null
 begin
-    create table Passenger_Type(
+    create table Flight(
         ID int identity(1,1) primary key,
-        Name varchar(30) not null check (len(Name) > 5),
+        Boarding_Time time not null,
+        Flight_Date date not null check (Flight_Date >= CONVERT(DATE, GETDATE())),
+        Gate tinyint not null check (Gate BETWEEN 1 AND 255),
+        Check_In_Counter bit not null,
+        Flight_Number_id int not null,
+		Plane_ID int not null,
+		Airline_ID int not null,
+        foreign key (Flight_Number_ID) references Flight_Number(ID) ON DELETE NO ACTION,
+		foreign key (Plane_id) references Plane_Model(ID) ON DELETE NO ACTION,
+		foreign key (Airline_ID) references Airline(ID) ON DELETE NO ACTION,
     );
 end
 go
 
 ---------------------------------------------------------------------
 
-if object_id('Type_Assigment', 'U') is null
+if object_id('Available_Seat', 'U') is null --Check in
 begin
-    create table Type_Assigment(
+    create table Available_Seat(
         ID int identity(1,1) primary key,
-        Date date not null,
-		Passenger_Type_ID int not null,
-		foreign key (Passenger_Type_ID) references Passenger_Type(ID) ON DELETE NO ACTION,
-	);
+		Date date not null,
+		Time time not null,
+        Flight_ID int not null,
+        Seat_ID int not null,
+        foreign key (Flight_ID) references Flight(ID) ON DELETE NO ACTION,
+        foreign key (Seat_ID) references Seat(ID) ON DELETE NO ACTION
+    );
 end
 go
 
 ---------------------------------------------------------------------
 
-if object_id('Person_Type', 'U') is null
+if object_id('Passenger_Type', 'U') is null
 begin
-    create table Person_Type(
+    create table Passenger_Type(
         ID int identity(1,1) primary key,
-        Name varchar(30) not null check (Name IN('natural person','artificial person')),
+        Name varchar(30) not null check (len(Name) > 5),
     );
 end
 go
@@ -221,9 +174,12 @@ begin
         Name varchar(50) not null unique check (len(Name) > 5),
 		Phone varchar(20) not null,
 		Email varchar(50) not null check (len(Email) > 10),
-		Type varchar(10) not null default 'Passenger' check ( Type in('Crew Member','Passenger','Both')),
-		Person_Type_ID int not null,
-		foreign key (Person_Type_ID) references Person_Type(ID) ON DELETE NO ACTION,
+		Type varchar(50)  default 'Passenger' check (
+            Type like '%Passenger%' or 
+            Type like '%Crew Member%' or 
+            Type like '%Customer%' or
+			Type is null
+        )
     );
 end
 go
@@ -235,11 +191,23 @@ begin
     create table Passenger(
         ID int identity(1,1) primary key,
         Number_Of_Flights int not null,
-		Type varchar(10) not null default 'Passenger' check ( Type in('Passenger','Both')),
-		Type_Assigment_ID int not null,
+		Person_ID int not null,
+		Passenger_Type_ID int not null,
+		foreign key (Passenger_Type_ID) references Passenger_Type(ID) ON DELETE NO ACTION,
+		foreign key (Person_ID) references Person(ID) ON DELETE NO ACTION,
+    );
+end
+go
+
+---------------------------------------------------------------------
+
+if object_id('Customer', 'U') is null
+begin
+    create table Customer(
+        ID int identity(1,1) primary key,
+        Loyalty_Points int not null,
 		Person_ID int not null,
 		foreign key (Person_ID) references Person(ID) ON DELETE NO ACTION,
-		foreign key (Type_Assigment_ID) references Type_Assigment(ID) ON DELETE NO ACTION
     );
 end
 go
@@ -251,14 +219,13 @@ begin
     create table Crew_Member(
         ID int identity(1,1) primary key,
         Flying_Hours int not null,
-		Type varchar(50) not null default 'Crew Member' check ( Type in('Crew Member','Both')),
+		Type varchar(50) not null default 'Crew Member' check ( Type in('Crew Member')),
 		Person_ID int not null,
 		foreign key (Person_ID) references Person(ID) ON DELETE NO ACTION,
     );
 end
 go
 
-select * from Crew_Member
 ---------------------------------------------------------------------
 
 if object_id('Crew_Rol', 'U') is null
@@ -307,7 +274,7 @@ if object_id('Flight_Cancellation', 'U') is null
 begin
     create table Flight_Cancellation(
         ID int identity(1,1) primary key,
-		Reason varchar(75) not null check (len(Reason)>15),
+		Reason varchar(75) not null default 'Sin Especificar' check (len(Reason)>5),
         NewDepartureDate date not null,
 		Flight_ID int not null,
 		foreign key (Flight_ID) references Flight(ID) ON DELETE NO ACTION,
@@ -416,10 +383,10 @@ begin
         ID int identity(1,1) primary key,
 		State bit not null default 1,
 		Reservation_Date date not null default getdate(),
-        Person_ID int not null,
+        Customer_ID int not null,
 		Payment_ID int not null,
 		Ticketing_Code int not null,
-        foreign key (Person_ID) references Person(ID) ON DELETE NO ACTION,
+        foreign key (Customer_ID) references Customer(ID) ON DELETE NO ACTION,
 		foreign key (Payment_ID) references Payment(ID) ON DELETE NO ACTION,
 		foreign key (Ticketing_Code) references Ticket(Ticketing_Code) ON DELETE NO ACTION,
     );
@@ -438,14 +405,14 @@ begin
     );
 end
 go
-
+select * from Confirmation
 ---------------------------------------------------------------------
 
 if object_id('Cancellation', 'U') is null
 begin
     create table Cancellation(
         ID int identity(1,1) primary key,
-		Reason varchar(50) not null check (len(Reason) > 5),
+		Reason varchar(50) not null default 'Sin epecificar' check (len(Reason) > 5),
 		Cancellation_Date date not null default getdate(),
 		Penalty int not null,
 		Reserve_ID int not null,
@@ -453,7 +420,7 @@ begin
     );
 end
 go
-
+select * from Flight_Cancellation
 ---------------------------------------------------------------------
 
 if object_id('Coupon', 'U') is null
@@ -515,9 +482,9 @@ go
 
 ---------------------------------------------------------------------
 
-if object_id('Available_Seat_Coupon', 'U') is null
+if object_id('Check_In', 'U') is null
 begin
-	create table Available_Seat_Coupon(
+	create table Check_In(
 		ID int not null identity(1,1) primary key,
 		Coupon_id int not null,
 		Available_Seat_id int not null,
@@ -526,6 +493,7 @@ begin
 	);
 end 
 go
+
 
 
 

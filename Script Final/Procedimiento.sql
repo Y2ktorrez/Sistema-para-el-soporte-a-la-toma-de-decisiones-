@@ -83,10 +83,12 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
-        INSERT INTO Airplane (Begin_of_Operation, Status, Plane_Model_ID)
-        SELECT 
+WHILE @i < @NumberOfRows
+BEGIN
+		BEGIN TRY
+			BEGIN TRANSACTION
+			INSERT INTO Airplane (Begin_of_Operation, Status, Plane_Model_ID)
+			SELECT 
             -- Fecha de inicio de operación aleatoria en los últimos 10 años
             DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 3650), GETDATE()) AS Begin_of_Operation,
             -- Estado aleatorio ('Active', 'Inactive', 'Maintenance')
@@ -97,7 +99,11 @@ BEGIN
             END AS Status,
             -- Selección aleatoria de Plane_Model_ID de la tabla Plane_Model
             (SELECT TOP 1 ID FROM Plane_Model ORDER BY NEWID()) AS Plane_Model_ID;
-
+		COMMIT TRANSACTION;
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION;
+	END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -111,9 +117,11 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
-        INSERT INTO Flight_Number (Departure_Time, Type, Airport_Start, Airport_Goal, Plane_id)
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;     
+        INSERT INTO Flight_Number (Departure_Time, Type, Airport_Start, Airport_Goal)
         SELECT 
             -- Hora de salida aleatoria entre las 00:00 y las 23:59
             CONVERT(TIME, DATEADD(MINUTE, ABS(CHECKSUM(NEWID()) % 1440), '00:00:00')) AS Departure_Time,
@@ -122,10 +130,14 @@ BEGIN
             -- Aeropuerto de salida aleatorio
             (SELECT TOP 1 id FROM Airport ORDER BY NEWID()) AS Airport_Start,
             -- Aeropuerto de llegada aleatorio, asegurándose que no sea igual al de salida
-            (SELECT TOP 1 id FROM Airport WHERE id <> (SELECT TOP 1 id FROM Airport ORDER BY NEWID()) ORDER BY NEWID()) AS Airport_Goal,
+            (SELECT TOP 1 id FROM Airport WHERE id <> (SELECT TOP 1 id FROM Airport ORDER BY NEWID()) ORDER BY NEWID()) AS Airport_Goal;
             -- Avión aleatorio (Plane_id) de la tabla Plane_Model
-            (SELECT TOP 1 id FROM Plane_Model ORDER BY NEWID()) AS Plane_id;
-
+            --(SELECT TOP 1 id FROM Plane_Model ORDER BY NEWID()) AS Plane_id;
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -140,8 +152,10 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;    
         INSERT INTO Seat (Size, Number, Location, Plane_Model_ID)
         SELECT 
             -- Estado aleatorio ('Small', 'Medium', 'Large')
@@ -162,104 +176,17 @@ BEGIN
             END AS Location,
             -- Selección aleatoria de Plane_Model_ID de la tabla Plane_Model
             (SELECT TOP 1 ID FROM Plane_Model ORDER BY NEWID()) AS Plane_Model_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
 GO
 
 --===================================================================
---Procedure for Flight
-CREATE PROCEDURE InsertFlights
-    @NumberOfRows INT -- Cantidad a insertar
-AS
-BEGIN
-    DECLARE @i INT = 0;
-
-    WHILE @i < @NumberOfRows
-    BEGIN
-        
-        -- Insertar en la tabla Flight
-        INSERT INTO Flight (Boarding_Time, Flight_Date, Gate, Check_In_Counter, Flight_Number_ID)
-        SELECT
-            -- Hora de embarque aleatoria entre las 00:00 y las 23:59
-            CONVERT(TIME, DATEADD(MINUTE, ABS(CHECKSUM(NEWID()) % 1440), '00:00:00')) AS Boarding_Time,
-            -- Fecha de vuelo aleatoria a partir del día actual
-            DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 365), CONVERT(DATE, GETDATE())) AS Flight_Date,
-            -- Puerta aleatoria entre 1 y 255
-            ABS(CHECKSUM(NEWID()) % 255) + 1 AS Gate,
-            -- Contador de check-in aleatorio (0 o 1)
-            ABS(CHECKSUM(NEWID()) % 2) AS Check_In_Counter,
-            -- Número de vuelo seleccionado
-            (SELECT TOP 1 ID FROM Flight_Number ORDER BY NEWID()) AS Flight_Number_ID ;
-        SET @i = @i + 1;
-    END;
-END;
-GO
-
---=======================================================================
---Procedure for FlightScales
-CREATE PROCEDURE InsertFlightScales
-AS
-BEGIN
-	INSERT INTO Flight_Scale (Scale_Type, Scale_Time) VALUES 
-	('Technical scale', '01:00:00'), 
-	('Regular scale', '00:40:00'), 
-	('Connected flight','00:30:00' );
-END;
-GO
---=====================================================================
---Procedure for InsertScales
-CREATE PROCEDURE InsertScales
-    @NumberOfRows INT -- Cantidad de registros a insertar
-AS
-BEGIN
-    DECLARE @i INT = 0;
-
-    WHILE @i < @NumberOfRows
-    BEGIN
-        -- Insertar en la tabla Scale
-        INSERT INTO Scale (Date, Time, Flight_ID, Airport_ID)
-        SELECT
-            -- Fecha aleatoria en el futuro o el día actual
-            DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 365), CONVERT(DATE, GETDATE())) AS Date,
-            -- Hora aleatoria entre las 00:00 y las 23:59
-            CONVERT(TIME, DATEADD(MINUTE, ABS(CHECKSUM(NEWID()) % 1440), '00:00:00')) AS Time,
-            -- ID de vuelo seleccionado
-			(SELECT TOP 1 ID FROM Flight ORDER BY NEWID()) AS Flight_ID, 
-            -- ID de aeropuerto seleccionado
-			(SELECT TOP 1 ID FROM Airport ORDER BY NEWID()) AS Airport_ID ;
-
-        SET @i = @i + 1;
-    END;
-END;
-GO
-
---============================================================================
---Procedure for Available_Seat
-CREATE PROCEDURE InsertAvailable_Seat
-    @NumberOfRows INT -- Cantidad de registros a insertar
-AS
-BEGIN
-    DECLARE @i INT = 0;
-
-    WHILE @i < 50--@NumberOfRows
-    BEGIN
-        -- Insertar en la tabla Type_Assigment
-        INSERT INTO Available_Seat (Flight_ID, Seat_ID)
-        SELECT
-            -- Fecha aleatoria en el futuro o el día actual
-           (SELECT TOP 1 ID FROM Flight ORDER BY NEWID()) AS Flight_ID ,
-            -- ID del vuelo selecionado seleccionado
-			(SELECT TOP 1 ID FROM Seat ORDER BY NEWID()) AS Seat_ID ;
-            
-
-        SET @i = @i + 1;
-    END;
-END;
-GO
-
---=============================================================================
 --Procedure for Airline
 CREATE PROCEDURE InsertAirline
 AS
@@ -286,6 +213,80 @@ BEGIN
 END;
 GO
 
+--===================================================================
+--Procedure for Flight
+CREATE PROCEDURE InsertFlights
+    @NumberOfRows INT -- Cantidad a insertar
+AS
+BEGIN
+    DECLARE @i INT = 0;
+
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;   
+        
+        -- Insertar en la tabla Flight
+        INSERT INTO Flight (Boarding_Time, Flight_Date, Gate, Check_In_Counter, Flight_Number_ID,Plane_ID,Airline_ID)
+        SELECT
+            -- Hora de embarque aleatoria entre las 00:00 y las 23:59
+            CONVERT(TIME, DATEADD(MINUTE, ABS(CHECKSUM(NEWID()) % 1440), '00:00:00')) AS Boarding_Time,
+            -- Fecha de vuelo aleatoria a partir del día actual
+            DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 365), CONVERT(DATE, GETDATE())) AS Flight_Date,
+            -- Puerta aleatoria entre 1 y 255
+            ABS(CHECKSUM(NEWID()) % 255) + 1 AS Gate,
+            -- Contador de check-in aleatorio (0 o 1)
+            ABS(CHECKSUM(NEWID()) % 2) AS Check_In_Counter,
+            -- Número de vuelo seleccionado
+            (SELECT TOP 1 ID FROM Flight_Number ORDER BY NEWID()) AS Flight_Number_ID,
+			-- Número de modelo de avion seleccionado
+            (SELECT TOP 1 ID FROM Plane_Model ORDER BY NEWID()) AS Plane_id,
+			-- Nombre de aerolinea seleccionado
+            (SELECT TOP 1 ID FROM Airline ORDER BY NEWID()) AS Airline_ID ;
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
+        SET @i = @i + 1;
+    END;
+END;
+GO
+
+--============================================================================
+--Procedure for Available_Seat
+CREATE PROCEDURE InsertAvailable_Seat
+    @NumberOfRows INT -- Cantidad de registros a insertar
+AS
+BEGIN
+    DECLARE @i INT = 0;
+
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;  
+        -- Insertar en la tabla Type_Assigment
+        INSERT INTO Available_Seat (Date,Time,Flight_ID, Seat_ID)
+        SELECT
+		 -- Fecha aleatoria en el futuro o el día actual
+            DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 365), CONVERT(DATE, GETDATE())) AS Date,
+            -- Hora aleatoria entre las 00:00 y las 23:59
+            CONVERT(TIME, DATEADD(MINUTE, ABS(CHECKSUM(NEWID()) % 1440), '00:00:00')) AS Time,
+            -- Fecha aleatoria en el futuro o el día actual
+           (SELECT TOP 1 ID FROM Flight ORDER BY NEWID()) AS Flight_ID ,
+            -- ID del vuelo selecionado seleccionado
+			(SELECT TOP 1 ID FROM Seat ORDER BY NEWID()) AS Seat_ID ;
+         COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;           
+
+        SET @i = @i + 1;
+    END;
+END;
+GO
+
 --=============================================================================
 --Procedure for Passenger_Type
 CREATE PROCEDURE InsertPassenger_Type
@@ -302,43 +303,6 @@ begin
 	('Frequent Customer');
 end
 
-END;
-GO
-
---==========================================================================
---Procedure for Type_Assigment
-CREATE PROCEDURE InsertTypeAssignments
-    @NumberOfRows INT -- Cantidad de registros a insertar
-AS
-BEGIN
-    DECLARE @i INT = 0;
-
-    WHILE @i < @NumberOfRows
-    BEGIN
-        -- Insertar en la tabla Type_Assigment
-        INSERT INTO Type_Assigment (Date, Passenger_Type_ID)
-        SELECT
-            -- Fecha aleatoria en el futuro o el día actual
-            DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 365), CONVERT(DATE, GETDATE())) AS Date,
-            -- ID de tipo de pasajero seleccionado
-			(SELECT TOP 1 ID FROM Passenger_Type ORDER BY NEWID()) AS Passenger_Type_ID ;    
-
-        SET @i = @i + 1;
-    END;
-END;
-GO
-
---================================================================
---Procedure for Person_Type
-CREATE PROCEDURE InsertPerson_Type
-AS
-BEGIN
-if not exists (select 1 from Person_Type) 
-	begin
-		INSERT INTO Person_Type(Name) VALUES
-		('Natural Person'),
-		('Artificial Person');
-	end
 END;
 GO
 
@@ -375,7 +339,7 @@ BEGIN
     DECLARE @Name VARCHAR(50);
     DECLARE @Phone VARCHAR(20);
     DECLARE @Email VARCHAR(50);
-    DECLARE @RandomType VARCHAR(10);
+    DECLARE @RandomType VARCHAR(15);
     DECLARE @PersonTypeID INT;
 
     -- Declarar el cursor para iterar sobre los datos de #TempPersonData
@@ -393,15 +357,22 @@ BEGIN
 		SET @RandomType = 
 			CASE ABS(CHECKSUM(NEWID()) % 3)
 			WHEN 0 THEN 'Crew Member'
-			WHEN 1 THEN 'Passenger'
-			WHEN 2 THEN 'Both'
+			WHEN 1 THEN 'Passenger'--'Passenger'
+			WHEN 2 THEN 'Customer'
 		END;
-        -- Seleccionar un valor aleatorio para 'Person_Type_ID' desde la tabla 'Person_Type'
-        SELECT TOP 1 @PersonTypeID = ID FROM Person_Type ORDER BY NEWID();
 
-        -- Insertar los datos en la tabla Person
-        INSERT INTO Person (Name, Phone, Email, Type, Person_Type_ID)
-        VALUES (@Name, @Phone, @Email, @RandomType, @PersonTypeID);
+		IF @RandomType IS NULL
+		BEGIN
+			-- Insertar los datos en la tabla Person
+			INSERT INTO Person (Name, Phone, Email)
+			VALUES (@Name, @Phone, @Email);
+		END
+		ELSE
+		BEGIN
+			-- Insertar los datos en la tabla Person
+			INSERT INTO Person (Name, Phone, Email, Type)
+			VALUES (@Name, @Phone, @Email, @RandomType);
+		END  
 
         -- Pasar a la siguiente fila del cursor
         FETCH NEXT FROM cur INTO @Name, @Phone, @Email;
@@ -421,58 +392,88 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;  
         -- Insertar en la tabla Passenger
-        INSERT INTO Passenger (Number_Of_Flights, Type, Type_Assigment_ID, Person_ID)
+        INSERT INTO Passenger (Number_Of_Flights, Person_ID,Passenger_Type_ID)
         SELECT 
             -- Número aleatorio de vuelos entre 0 y 100
             ABS(CHECKSUM(NEWID()) % 101) AS Number_Of_Flights,
-            -- Tipo aleatorio ('Passenger' o 'Both')
-            CASE ABS(CHECKSUM(NEWID()) % 2)
-                WHEN 0 THEN 'Passenger'
-                ELSE 'Both'
-            END AS Type,
-            -- Tipo de asignación aleatorio (Type_Assigment_ID)
-			(SELECT TOP 1 ID FROM Type_Assigment ORDER BY NEWID()) AS Type_Assigment_ID ,
             -- Persona aleatoria (Person_ID)
-			(SELECT TOP 1 ID FROM Person ORDER BY NEWID()) AS Person_ID ;
-
+			(SELECT TOP 1 ID FROM Person ORDER BY NEWID()) AS Person_ID,
+			 -- Tipo de asignación aleatorio (Type_Assigment_ID)
+			(SELECT TOP 1 ID FROM Passenger_Type ORDER BY NEWID()) AS Passenger_Type_ID;
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
 GO
 
 --=============================================================================
---Procedure for Crew_Member
-
-CREATE PROCEDURE InsertCrewMembers
-    @NumberOfRows INT -- Cantidad de miembros de la tripulación a insertar
+--Procedure for Customer
+CREATE PROCEDURE InsertCustomer
+    @NumberOfRows INT -- Cantidad de pasajeros a insertar
 AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
-        -- Insertar en la tabla Crew_Member
-        INSERT INTO Crew_Member (Flying_Hours, Type, Person_ID)
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;    
+        -- Insertar en la tabla Passenger
+        INSERT INTO Customer (Loyalty_Points, Person_ID)
         SELECT 
-            -- Horas de vuelo aleatorias entre 0 y 1000
-            ABS(CHECKSUM(NEWID()) % 500) AS Flying_Hours,
-            -- Tipo aleatorio ('Crew Member' o 'Both')
-            CASE ABS(CHECKSUM(NEWID()) % 2)
-                WHEN 0 THEN 'Crew Member'
-                ELSE 'Both'
-            END AS Type,
+            -- Número aleatorio de vuelos entre 0 y 100
+            ABS(CHECKSUM(NEWID()) % 100) AS Number_Of_Flights,
             -- Persona aleatoria (Person_ID)
-			(SELECT TOP 1 ID FROM Person ORDER BY NEWID()) AS Person_ID ;
-
+			(SELECT TOP 1 ID FROM Person ORDER BY NEWID()) AS Person_ID;
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
 GO
 
+
 --=============================================================================
+--Procedure for Crew_Member
+CREATE PROCEDURE InsertCrew_Member
+    @NumberOfRows INT -- Cantidad de pasajeros a insertar
+AS
+BEGIN
+    DECLARE @i INT = 0;
+
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;    
+        -- Insertar en la tabla Passenger
+        INSERT INTO Crew_Member (Flying_Hours, Person_ID)
+        SELECT 
+            -- Número aleatorio de vuelos entre 0 y 100
+            ABS(CHECKSUM(NEWID()) % 2000) AS Flying_Hours,
+            -- Persona aleatoria (Person_ID)
+			(SELECT TOP 1 ID FROM Person ORDER BY NEWID()) AS Person_ID;
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
+        SET @i = @i + 1;
+    END;
+END;
+GO
+--============================================================================
 --Procedure for Crew_Rol
 CREATE PROCEDURE InsertCrew_Rol
 AS
@@ -498,9 +499,10 @@ CREATE PROCEDURE InsertCrewAssignments
 AS
 BEGIN
     DECLARE @i INT = 0;
-
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;     
         -- Insertar en la tabla Crew_Assigment
         INSERT INTO Crew_Assigment (Date, Crew_Rol_ID, Flight_ID, Crew_Member_ID)
         SELECT 
@@ -512,7 +514,11 @@ BEGIN
 			(SELECT TOP 1 ID FROM Flight ORDER BY NEWID()) AS Flight_ID ,
             -- Miembro de la tripulación aleatorio (Crew_Member_ID)
 			(SELECT TOP 1 ID FROM Crew_Member ORDER BY NEWID()) AS Crew_Member_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -526,8 +532,10 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;     
         -- Insertar en la tabla Frequent_Flyer_Card
         INSERT INTO Frequent_Flyer_Card (Miles, Meal_Code, Passenger_ID)
         SELECT 
@@ -537,7 +545,11 @@ BEGIN
             ABS(CHECKSUM(NEWID()) % 10) + 1 AS Meal_Code,
             -- Pasajero aleatorio (Passenger_ID)
 			(SELECT TOP 1 ID FROM Passenger ORDER BY NEWID()) AS Passenger_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -549,28 +561,34 @@ CREATE PROCEDURE InsertFlightCancellations
     @NumberOfRows INT -- Cantidad de cancelaciones de vuelo a insertar
 AS
 BEGIN
-    DECLARE @i INT = 0;
+   DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN	
+    BEGIN TRY
+        BEGIN TRANSACTION;        
         -- Insertar en la tabla Flight_Cancellation
         INSERT INTO Flight_Cancellation (Reason, NewDepartureDate, Flight_ID)
         SELECT 
             -- Razón aleatoria con al menos 16 caracteres
             CASE ABS(CHECKSUM(NEWID()) % 5)
-                WHEN 0 THEN 'Adverse weather conditions'--Condiciones meteorológicas adversas'
-                WHEN 1 THEN 'Technical problems'--Problemas de salud'
-				WHEN 2 THEN 'Lack of crew' --falta de tripulacion
-				WHEN 3 THEN 'Operational problems'
-				WHEN 4 THEN 'Security issues' --problemas de seguridad
+                WHEN 0 THEN 'Adverse weather conditions' --Condiciones meteorológicas adversas'
+                WHEN 1 THEN 'Technical problems' --Problemas de salud'
+                WHEN 2 THEN 'Lack of crew' --falta de tripulacion
+                WHEN 3 THEN 'Operational problems'
+                WHEN 4 THEN 'Security issues' --problemas de seguridad
             END AS Reason,
-		   -- Nueva fecha de salida aleatoria en los próximos 30 días
+            -- Nueva fecha de salida aleatoria en los próximos 30 días
             DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 31), GETDATE()) AS NewDepartureDate,
             -- Vuelo aleatorio (Flight_ID)
-			(SELECT TOP 1 ID FROM Flight ORDER BY NEWID()) AS Flight_ID;
-
-        SET @i = @i + 1;
-    END;
+            (SELECT TOP 1 ID FROM Flight ORDER BY NEWID()) AS Flight_ID;
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
+    SET @i = @i + 1;
+END;
 END;
 GO
 
@@ -582,8 +600,10 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < 30--@NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;   
         -- Insertar en la tabla Flight_Reprograming
         INSERT INTO Flight_Reprograming (NewDepartureDate, NewDepartureTime, Flight_Cancellation_ID)
         SELECT 
@@ -593,7 +613,11 @@ BEGIN
             CONVERT(TIME, DATEADD(MINUTE, ABS(CHECKSUM(NEWID()) % 1440), '00:00:00')) AS NewDepartureTime,
             -- Cancelación de vuelo aleatoria (Flight_Cancellation_ID)
 			(SELECT TOP 1 ID FROM Flight_Cancellation ORDER BY NEWID()) AS Flight_Cancellation_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -624,8 +648,10 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;   
         -- Insertar en la tabla Payment
         INSERT INTO Payment (Currency, Amount, Date, Payment_Type_ID)
         SELECT 
@@ -637,7 +663,11 @@ BEGIN
             DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 365), GETDATE()) AS Date,
             -- Tipo de pago aleatorio (Payment_Type_ID)
 			(SELECT TOP 1 ID FROM Payment_Type ORDER BY NEWID()) AS Payment_Type_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -670,8 +700,10 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION; 
         -- Insertar en la tabla Document
         INSERT INTO Document (Date_of_Issue, Valid_Date, Document_Type_ID, Country_ID)
         SELECT 
@@ -683,7 +715,11 @@ BEGIN
 			(SELECT TOP 1 ID FROM Document_Type ORDER BY NEWID()) AS Document_Type_ID,
             -- País aleatorio (Country_ID)
 			(SELECT TOP 1 ID FROM Country ORDER BY NEWID()) AS Country_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -713,8 +749,10 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION; 
         -- Insertar en la tabla Ticket
         INSERT INTO Ticket (Number, Category_id, Document_ID)
         SELECT 
@@ -724,7 +762,11 @@ BEGIN
 			(SELECT TOP 1 ID FROM Category ORDER BY NEWID()) AS Category_id,
 			-- Documento (Document_ID)
 			(SELECT TOP 1 ID FROM Document ORDER BY NEWID()) AS Document_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -738,60 +780,101 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;  
         -- Insertar en la tabla Reserve
-        INSERT INTO Reserve (State, Reservation_Date, Person_ID, Payment_ID, Ticketing_Code)
+        INSERT INTO Reserve (State, Reservation_Date, Customer_ID, Payment_ID, Ticketing_Code)
 		SELECT
                 -- Estado aleatorio (0 o 1)
                 ABS(CHECKSUM(NEWID()) % 2),
                 -- Fecha de reserva aleatoria en los últimos 30 días
                 DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 30), GETDATE()),
                 -- Persona aleatoria
-  				(SELECT TOP 1 ID FROM Person ORDER BY NEWID()) AS Person_ID,
+  				(SELECT TOP 1 ID FROM Customer ORDER BY NEWID()) AS Customer_ID,
                 -- Pago aleatorio
 				(SELECT TOP 1 ID FROM Payment ORDER BY NEWID()) AS Payment_ID,
                 -- Código de ticket aleatorio
 				(SELECT TOP 1 Ticketing_Code FROM Ticket ORDER BY NEWID()) AS Ticketing_Code;
-       
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;      
         SET @i = @i + 1;
     END;
 END;
 GO
 
 --=============================================================================
+--Procedure for Confirmation
+CREATE PROCEDURE InsertConfirmation
+    @NumberOfRows INT -- Cantidad de reservas a insertar
+AS
+BEGIN
+    DECLARE @i INT = 0;
+
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;  
+        -- Insertar en la tabla Reserve
+        INSERT INTO Confirmation (Date, Reserve_ID)
+		SELECT
+                -- Fecha de confimacion aleatoria en los últimos 30 días
+                DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 30), GETDATE()),
+                -- reserva aleatoria
+  				(SELECT TOP 1 ID FROM Reserve ORDER BY NEWID()) AS Reserve_ID;
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;     
+        SET @i = @i + 1;
+    END;
+END;
+GO
+--==========================================================================
 --Procedure for Cancellation
 CREATE PROCEDURE InsertCancellations
     @NumberOfRows INT -- Cantidad de cancelaciones a insertar
 AS
 BEGIN
+    -- Declarar variables
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
-        -- Insertar en la tabla Cancellation
-        INSERT INTO Cancellation (Reason, Cancellation_Date, Penalty, Reserve_ID)
-        SELECT
-                -- Razón aleatoria de al menos 6 caracteres                           
-            CASE ABS(CHECKSUM(NEWID()) % 6)
-                WHEN 0 THEN 'Health problems'--Problemas de salud
-                WHEN 1 THEN 'Changes at work'--Cambios en el trabajo'
-				WHEN 2 THEN 'Family emergencies' --Emergencias familiares
-				WHEN 3 THEN 'Financial problems' --Problemas financieros
-				WHEN 4 THEN 'Change of plans' --Cambio de planes
-				WHEN 5 THEN 'Incomplete documentation' --Documentación incompleta
-            END AS Reason,
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;  
+            -- Insertar en la tabla Cancellation
+            INSERT INTO Cancellation (Reason, Cancellation_Date, Penalty, Reserve_ID)
+            SELECT
+                -- Razón aleatoria de al menos 6 caracteres
+                CASE ABS(CHECKSUM(NEWID()) % 6)
+                    WHEN 0 THEN 'Health problems' --Problemas de salud
+                    WHEN 1 THEN 'Changes at work' --Cambios en el trabajo
+                    WHEN 2 THEN 'Family emergencies' --Emergencias familiares
+                    WHEN 3 THEN 'Financial problems' --Problemas financieros
+                    WHEN 4 THEN 'Change of plans' --Cambio de planes
+                    WHEN 5 THEN 'Incomplete documentation' --Documentación incompleta
+                END AS Reason,
                 -- Fecha de cancelación aleatoria dentro de los últimos 30 días
-                DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 30), GETDATE()),
+                DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 30), GETDATE()) AS Cancellation_Date,
                 -- Penalidad aleatoria entre 100 y 500
-                ABS(CHECKSUM(NEWID()) % 401) + 100,
-                -- Reserva aleatoria
-				(SELECT TOP 1 ID FROM Reserve ORDER BY NEWID()) AS Reserve_ID;
-
-        SET @i = @i + 1;
-    END;
+                ABS(CHECKSUM(NEWID()) % 401) + 100 AS Penalty,
+                (SELECT TOP 1 ID FROM Reserve ORDER BY NEWID()) AS Reserve_ID;
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
+            SET @i = @i + 1;
+	END;
 END;
 GO
+
 
 --=============================================================================
 --Procedure for Coupon
@@ -803,6 +886,8 @@ BEGIN
 
     WHILE @i < @NumberOfRows
     BEGIN
+	    BEGIN TRY
+        BEGIN TRANSACTION;  
         -- Insertar en la tabla Coupon
         INSERT INTO Coupon (Date_of_Redemption, Class, Standby, Meal_Code, Ticketing_Code, Flight_ID)
         SELECT
@@ -826,7 +911,11 @@ BEGIN
 			(SELECT TOP 1 Ticketing_Code FROM Ticket ORDER BY NEWID()) AS Ticketing_Code,
 		    -- Seleccionar un vuelo aleatorio
 			(SELECT TOP 1 ID FROM Flight ORDER BY NEWID()) AS Flight_ID;
-        
+         COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;       
         SET @i = @i + 1;
     END;
 END;
@@ -840,8 +929,10 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+ WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;  
         -- Insertar en la tabla Boarding_Pass
         INSERT INTO Boarding_Pass (Gate, Coupon_ID)
 		SELECT
@@ -849,7 +940,11 @@ BEGIN
             ABS(CHECKSUM(NEWID()) % 50) + 1 AS Gate,
             -- Cupón aleatorio
 			(SELECT TOP 1 ID FROM Coupon ORDER BY NEWID()) AS Coupon_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -863,8 +958,10 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+	BEGIN TRY
+        BEGIN TRANSACTION; 
         -- Insertar en la tabla Pieces_of_Luggage
         INSERT INTO Pieces_of_Luggage (Number, Weight, Coupon_ID)
 		SELECT
@@ -874,7 +971,11 @@ BEGIN
             CAST(ABS(CHECKSUM(NEWID()) % 50) + (RAND() * 0.99) AS DECIMAL(5, 2)) AS Weight,
             -- Cupón aleatorio
 			(SELECT TOP 1 ID FROM Coupon ORDER BY NEWID()) AS Coupon_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
@@ -888,8 +989,10 @@ AS
 BEGIN
     DECLARE @i INT = 0;
 
-    WHILE @i < @NumberOfRows
-    BEGIN
+WHILE @i < @NumberOfRows
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION; 
         -- Insertar en la tabla Baggage_Check_In
         INSERT INTO Baggage_Check_In (Prohibited_Item, Weight, Pieces_of_Luggage_ID)
         SELECT
@@ -899,15 +1002,19 @@ BEGIN
             CAST(ABS(CHECKSUM(NEWID()) % 50) + (RAND() * 0.99) AS DECIMAL(5, 2)) AS Weight,
             -- ID de piezas de equipaje aleatorio
             (SELECT TOP 1 ID FROM Pieces_of_Luggage ORDER BY NEWID()) AS Pieces_of_Luggage_ID;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
 GO
 
 --=============================================================================
---Procedure for Available_Seat_Coupon
-CREATE PROCEDURE InsertAvailableSeatCoupons
+--Procedure for Check_In
+CREATE PROCEDURE InsertCheck_In
     @NumberOfRows INT -- Cantidad de registros a insertar
 AS
 BEGIN
@@ -915,14 +1022,20 @@ BEGIN
 
     WHILE @i < @NumberOfRows
     BEGIN
+	    BEGIN TRY
+        BEGIN TRANSACTION;   
         -- Insertar en la tabla Available_Seat_Coupon
-        INSERT INTO Available_Seat_Coupon (Coupon_id, Available_Seat_id)
+        INSERT INTO Check_In (Coupon_id, Available_Seat_id)
         SELECT
             -- Cupón aleatorio
             (SELECT TOP 1 ID FROM Coupon ORDER BY NEWID()) AS Coupon_id,
             -- Asiento disponible aleatorio
             (SELECT TOP 1 ID FROM Available_Seat ORDER BY NEWID()) AS Available_Seat_id;
-
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+    END CATCH;
         SET @i = @i + 1;
     END;
 END;
